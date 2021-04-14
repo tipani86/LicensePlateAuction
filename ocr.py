@@ -13,25 +13,6 @@ keyboard = Controller()
 
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract'
 
-#"""
-# Loading static images for debug purposes
-
-paths = [
-    '2019_UI_update/normal.png',
-    '2019_UI_update/new01.jpg',
-    '2019_UI_update/new02.jpg',
-    '2019_UI_update/new03.jpg'
-]
-
-
-img = cv2.imread('2019_UI_update/new04.png')    # Pick custom image here
-
-
-# Loading image, from screenshots
-path = random.choice(paths)
-#img = cv2.imread(path)
-    
-#"""
 
 def preprocess(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)                             # Grayscaling
@@ -94,7 +75,7 @@ if method == "flash":
 
 if method == "html":
     standard_height = 25
-    x_adjustment = -8
+    x_adjustment = 0
     y_adjustment = -25
     plates_x_adjustment = 0  # 0 normally, 14 if using simulation
 
