@@ -21,25 +21,25 @@ def preprocess(img):
     return img
 
 def preprocess_info_screen(img, method):
-    img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)  # Zooming a bit
+
 
     # Filtering RED texts only
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     lower_red = np.array([100, 10, 10])
     if method == "html":
-        lower_red = np.array([115, 0, 0])
-    upper_red = np.array([130, 255, 255])
+        lower_red = np.array([110, 150, 150])
+    upper_red = np.array([140, 255, 255])
     mask = cv2.inRange(hsv, lower_red, upper_red)
     res = cv2.bitwise_and(img, img, mask=mask)
-
     res[np.where((res == [0, 0, 0]).all(axis=2))] = [255, 255, 255]     # Flipping fully black pixels back to white to help OCR
-    res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)                         # Grayscaling image
-    res = cv2.medianBlur(res, 3)
+
+    img = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)                         # Grayscaling image
+    img = cv2.resize(img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)  # Zooming a bit
+    img = cv2.medianBlur(img, 3)
     #cv2.imshow('image', img)
     #cv2.imshow('hsv', hsv)
     #cv2.imshow('mask', mask)
-    #cv2.imshow('res', res)
-    return res
+    return img
 
 def ocr(img, queue):
     try:
@@ -76,7 +76,7 @@ if method == "flash":
 if method == "html":
     standard_height = 25
     x_adjustment = 0
-    y_adjustment = -25
+    y_adjustment = -27
     plates_x_adjustment = 0  # 0 normally, 14 if using simulation
 
     plates_x = 546 + plates_x_adjustment + x_adjustment
@@ -87,10 +87,10 @@ if method == "html":
     auctioners_y = 532 + y_adjustment
     auctioners_width = 70
 
-    info_x = 560 + x_adjustment
+    info_x = 563 + x_adjustment
     info_y = 675 + y_adjustment
-    info_width = 275
-    info_height = 100
+    info_width = 100
+    info_height = 50
 
 if __name__ == "__main__":
     while True:
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         info = infothread.join()
         info = infoqueue.get()
 
-        #print(info)
+        # print(info)
 
         ocrtoc = t.time()
         ocrtime = ocrtoc - ocrtic
