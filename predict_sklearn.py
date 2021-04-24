@@ -30,6 +30,7 @@ method = "html"
 
 if method == "flash":
     standard_height = 18
+
     y_adjustment = 4
     plates_x_adjustment = 0  # 0 normally, 14 if using simulation
 
@@ -48,8 +49,8 @@ if method == "flash":
 
 if method == "html":
     standard_height = 25
-    x_adjustment = -8
-    y_adjustment = -25
+    x_adjustment = 0
+    y_adjustment = -27
     plates_x_adjustment = 0  # 0 normally, 14 if using simulation
 
     plates_x = 546 + plates_x_adjustment + x_adjustment
@@ -60,10 +61,10 @@ if method == "html":
     auctioners_y = 532 + y_adjustment
     auctioners_width = 70
 
-    info_x = 560 + x_adjustment
+    info_x = 563 + x_adjustment
     info_y = 675 + y_adjustment
-    info_width = 275
-    info_height = 100
+    info_width = 100
+    info_height = 50
 
 scaler = StandardScaler()
 
@@ -156,6 +157,7 @@ if __name__ == "__main__":
 
     socket_sent = 0
     backup_sent = 0
+    submit_price = 0
 
     while True:
         # Loading image, dynamic
@@ -184,9 +186,9 @@ if __name__ == "__main__":
 
         # Setting up preview for debug purposes
 
-        # cv2.imshow('Plates processed', plates_screen)
-        # cv2.imshow('Auctioners processed', auctioners_screen)
-        # cv2.imshow('Preview: Info box processed', info_screen)
+        cv2.imshow('Plates processed', plates_screen)
+        cv2.imshow('Auctioners processed', auctioners_screen)
+        cv2.imshow('Preview: Info box processed', info_screen)
 
         # Performing OCR
 
@@ -249,7 +251,7 @@ if __name__ == "__main__":
             try:
                 price = int(price)
             except:
-                # print("Error setting price!")
+                print("Error setting price!")
                 price = 0
 
         if plates == 0:
@@ -283,7 +285,7 @@ if __name__ == "__main__":
             # time = system_time
             pass
 
-        # print("Time: {}, price: {}, plates: {}, auctioners: {}".format(time, price, plates, auctioners))
+        print("Time: {}, price: {}, plates: {}, auctioners: {}".format(time, price, plates, auctioners))
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
