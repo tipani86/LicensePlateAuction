@@ -52,45 +52,56 @@ def ocr(img, queue):
 plates, auctioners = 0, 0
 method = "flash"
 method = "html"
+browser = "firefox"
 socket_sent = 0
 
+settings = {
+    'x_adjustment': 0,
+    'y_adjustment': 0,
+}
+
+if browser == "firefox":
+    settings['x_adjustment'] = 0
+    settings['y_adjustment'] = -27
+
 if method == "flash":
-    standard_height = 18
+    settings['method'] = method
+    settings['standard_height'] = 18
 
-    y_adjustment = 4
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
+    settings['y_adjustment'] = 4
+    settings['plates_x_adjustment'] = 0  # 0 normally, 14 if using simulation
 
-    plates_x = 621 + plates_x_adjustment
-    plates_y = 358 + y_adjustment
-    plates_width = 40
+    settings['plates_x'] = 621 + settings['plates_x_adjustment']
+    settings['plates_y'] = 358 + settings['y_adjustment']
+    settings['plates_width'] = 40
 
-    auctioners_x = 650
-    auctioners_y = 374 + y_adjustment
-    auctioners_width = 50
+    settings['auctioners_x'] = 650
+    settings['auctioners_y'] = 374 + settings['y_adjustment']
+    settings['auctioners_width'] = 50
 
-    info_x = 540
-    info_y = 450
-    info_width = 350
-    info_height = 190
+    settings['info_x'] = 540
+    settings['info_y'] = 450
+    settings['info_width'] = 350
+    settings['info_height'] = 190
 
 if method == "html":
-    standard_height = 25
-    x_adjustment = 0
-    y_adjustment = -27
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
+    settings['method'] = method
+    settings['standard_height'] = 25
+    settings['plates_x_adjustment'] = 0
 
-    plates_x = 546 + plates_x_adjustment + x_adjustment
-    plates_y = 508 + y_adjustment
-    plates_width = 70
+    settings['plates_x'] = 546 + settings['plates_x_adjustment'] + settings['x_adjustment']
+    settings['plates_y'] = 508 + settings['y_adjustment']
+    settings['plates_width'] = 70
 
-    auctioners_x = 582 + x_adjustment
-    auctioners_y = 532 + y_adjustment
-    auctioners_width = 70
+    settings['auctioners_x'] = 582 + settings['x_adjustment']
+    settings['auctioners_y'] = 532 + settings['y_adjustment']
+    settings['auctioners_width'] = 70
 
-    info_x = 563 + x_adjustment
-    info_y = 675 + y_adjustment
-    info_width = 100
-    info_height = 50
+    settings['info_x'] = 563 + settings['x_adjustment']
+    settings['info_y'] = 675 + settings['y_adjustment']
+    settings['info_width'] = 100
+    settings['info_height'] = 50
+
 
 if __name__ == "__main__":
     while True:
@@ -105,14 +116,29 @@ if __name__ == "__main__":
 
         processtic = t.time()
 
-        plates_screen = np.array(image.crop((plates_x, plates_y, plates_x + plates_width, plates_y + standard_height)))
+        plates_screen = np.array(image.crop((
+            settings['plates_x'],
+            settings['plates_y'],
+            settings['plates_x'] + settings['plates_width'],
+            settings['plates_y'] + settings['standard_height']
+        )))
         plates_screen = preprocess(plates_screen)
 
-        auctioners_screen = np.array(image.crop((auctioners_x, auctioners_y, auctioners_x + auctioners_width, auctioners_y + standard_height)))
+        auctioners_screen = np.array(image.crop((
+            settings['auctioners_x'],
+            settings['auctioners_y'],
+            settings['auctioners_x'] + settings['auctioners_width'],
+            settings['auctioners_y'] + settings['standard_height']
+        )))
         auctioners_screen = preprocess(auctioners_screen)
 
-        info_screen = np.array(image.crop((info_x, info_y, info_x + info_width, info_y + info_height)))
-        info_screen = preprocess_info_screen(info_screen, method)
+        info_screen = np.array(image.crop((
+            settings['info_x'],
+            settings['info_y'],
+            settings['info_x'] + settings['info_width'],
+            settings['info_y'] + settings['info_height']
+        )))
+        info_screen = preprocess_info_screen(info_screen, settings['method'])
 
         processtoc = t.time()
         processtime = processtoc - processtic
@@ -184,7 +210,7 @@ if __name__ == "__main__":
             try:
                 price = int(price)
             except:
-                print("Error setting price!")
+                print("Cannot detect price!")
                 price = 0
 
         if plates == 0:
@@ -204,12 +230,12 @@ if __name__ == "__main__":
         print('Grab: {}s, Processing: {}s, OCR: {}s, Total: {}s ({}fps)'.format(np.round(grabtime,2), np.round(processtime,2), np.round(ocrtime,2), np.round(grabtime + processtime + ocrtime,2), np.round(1/(grabtime + processtime + ocrtime),1)))
         print('')
 
-        # Testing autosubmit
-        if time == "11:23:30" and socket_sent == 0:
-            print("Attempting to send socket info...")
-            send_string = str(price)
-            keyboard.type(send_string)
-            socket_sent = 1
+        # # Testing autosubmit
+        # if time == "11:23:30" and socket_sent == 0:
+        #     print("Attempting to send socket info...")
+        #     send_string = str(price)
+        #     keyboard.type(send_string)
+        #     socket_sent = 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()

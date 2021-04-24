@@ -15,7 +15,7 @@ from PIL import Image, ImageGrab
 from sklearn.preprocessing import *
 from sklearn.utils import shuffle
 from train_sklearn import _prepare_dataset
-from ocr import preprocess, preprocess_info_screen, ocr
+from ocr import preprocess, preprocess_info_screen, ocr, settings
 
 ##### SETTINGS #####
 
@@ -24,47 +24,6 @@ predict_second = 47     # What second (11:29:XX) to make the prediction in valid
 # Years to skip when importing data (to filter out data from different statistical distribution)
 skip_years = []
 # skip_years = [2014, 2015]
-
-method = "flash"
-method = "html"
-
-if method == "flash":
-    standard_height = 18
-
-    y_adjustment = 4
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
-
-    plates_x = 621 + plates_x_adjustment
-    plates_y = 358 + y_adjustment
-    plates_width = 40
-
-    auctioners_x = 650
-    auctioners_y = 374 + y_adjustment
-    auctioners_width = 50
-
-    info_x = 540
-    info_y = 450
-    info_width = 350
-    info_height = 190
-
-if method == "html":
-    standard_height = 25
-    x_adjustment = 0
-    y_adjustment = -27
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
-
-    plates_x = 546 + plates_x_adjustment + x_adjustment
-    plates_y = 508 + y_adjustment
-    plates_width = 70
-
-    auctioners_x = 582 + x_adjustment
-    auctioners_y = 532 + y_adjustment
-    auctioners_width = 70
-
-    info_x = 563 + x_adjustment
-    info_y = 675 + y_adjustment
-    info_width = 100
-    info_height = 50
 
 scaler = StandardScaler()
 
@@ -171,24 +130,37 @@ if __name__ == "__main__":
 
         processtic = t.time()
 
-        plates_screen = np.array(image.crop((plates_x, plates_y, plates_x + plates_width, plates_y + standard_height)))
+        plates_screen = np.array(image.crop((
+            settings['plates_x'],
+            settings['plates_y'],
+            settings['plates_x'] + settings['plates_width'],
+            settings['plates_y'] + settings['standard_height']
+        )))
         plates_screen = preprocess(plates_screen)
 
-        auctioners_screen = np.array(
-            image.crop((auctioners_x, auctioners_y, auctioners_x + auctioners_width, auctioners_y + standard_height)))
+        auctioners_screen = np.array(image.crop((
+            settings['auctioners_x'],
+            settings['auctioners_y'],
+            settings['auctioners_x'] + settings['auctioners_width'],
+            settings['auctioners_y'] + settings['standard_height']
+        )))
         auctioners_screen = preprocess(auctioners_screen)
 
-        info_screen = np.array(image.crop((info_x, info_y, info_x + info_width, info_y + info_height)))
-        info_screen = preprocess_info_screen(info_screen, method)
+        info_screen = np.array(image.crop((
+            settings['info_x'],
+            settings['info_y'],
+            settings['info_x'] + settings['info_width'],
+            settings['info_y'] + settings['info_height']
+        )))
+        info_screen = preprocess_info_screen(info_screen, settings['method'])
 
         processtoc = t.time()
         processtime = processtoc - processtic
 
-        # Setting up preview for debug purposes
-
-        cv2.imshow('Plates processed', plates_screen)
-        cv2.imshow('Auctioners processed', auctioners_screen)
-        cv2.imshow('Preview: Info box processed', info_screen)
+        # # Setting up preview for debug purposes
+        # cv2.imshow('Plates processed', plates_screen)
+        # cv2.imshow('Auctioners processed', auctioners_screen)
+        # cv2.imshow('Preview: Info box processed', info_screen)
 
         # Performing OCR
 
@@ -278,14 +250,15 @@ if __name__ == "__main__":
                 continue
         """
 
-        # If simulation mode is off, replace OCR'd time with system time because OCR might skip seconds
-        system_time = datetime.now()
-        system_time = system_time.strftime("%H:%M:%S")
-        if plates_x_adjustment == 0:
-            # time = system_time
-            pass
+        # # If simulation mode is off, replace OCR'd time with system time because OCR might skip seconds
+        # system_time = datetime.now()
+        # system_time = system_time.strftime("%H:%M:%S")
+        # if settings['plates_x_adjustment'] == 0:
+        #     # time = system_time
+        #     pass
 
-        print("Time: {}, price: {}, plates: {}, auctioners: {}".format(time, price, plates, auctioners))
+        # For debugging purposes
+        # print("Time: {}, price: {}, plates: {}, auctioners: {}".format(time, price, plates, auctioners))
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
@@ -326,8 +299,6 @@ if __name__ == "__main__":
         # pred = max(pred, pred_df["11:29:{}".format(predict_second)].to_numpy() + startprice + 300)
         pred = max(pred, price + 300)
 
-        # print("Plates: {}, Auctioners: {}".format(plates, auctioners))      # Debug purposes, comment during actual use
-
         """
         if time == "11:29:37" or time == "11:29:38":
             if startprice + predicted - 300 > price + 300:
@@ -340,9 +311,9 @@ if __name__ == "__main__":
 
         ##### CHANGE HERE IF PREDICTION TIME CHANGES #####
 
-        if time == "11:29:45":
+        if time == "11:29:45":  # Display backup strategy if actual prediction fails (45s + 1000)
             if backup_sent == 0:
-                print("Time: {}, current price: {}, BACKUP pred: {}".format(time, price, price + 1000))  # Backup strategy if actual prediction fail
+                print("Time: {}, current price: {}, BACKUP pred: {}".format(time, price, price + 1000))
                 backup_sent = 1
         if time == "11:29:{}".format(predict_second):
             bid = pred
