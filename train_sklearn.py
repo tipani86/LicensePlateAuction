@@ -12,7 +12,7 @@ from sklearn.neural_network import *
 
 ##### Dataset settings #####
 
-predict_second = 47     # What second (11:29:XX) to make the prediction in validation testing
+predict_second = 45     # What second (11:29:XX) to make the prediction in validation testing
 
 # Years to skip when importing data (to filter out data from different statistical distribution)
 skip_years = []
