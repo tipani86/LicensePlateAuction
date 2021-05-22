@@ -25,6 +25,11 @@ settings = {
     'y_adjustment': 0,
 }
 
+print("##### Settings #####")
+print("Browser: {}".format(browser))
+print("Method: {}".format(method))
+print("")
+
 if browser == "firefox":
     settings['x_adjustment'] = 0
     settings['y_adjustment'] = 0
@@ -260,7 +265,7 @@ if __name__ == "__main__":
                             if high - low == 600:
                                 price = (high + low) / 2
                             else:
-                                continue
+                                pass
 
         # print(info)
 
@@ -271,15 +276,15 @@ if __name__ == "__main__":
         posttic = t.time()
 
         try:
-            time = time[0]
-        except:
-            continue
-
-        try:
             price = int(price[0])
         except:
-            # print("Error setting price!")
+            print("Error setting price!")
             price = 0
+
+        try:
+            time = time[0]
+        except:
+            pass
 
         if plates == 0:
             try:
