@@ -1,69 +1,28 @@
 import os
-import numpy as np
-import pandas as pd
-import time as t
 import re
 import cv2
 import gzip
 import pickle
+import argparse
+import time as t
+import numpy as np
 import pytesseract
-from pynput.keyboard import Key, Controller
-from datetime import datetime, timedelta
+import pandas as pd
 from queue import Queue
 from threading import Thread
-from PIL import Image, ImageGrab
-from sklearn.preprocessing import *
 from sklearn.utils import shuffle
-from train_sklearn import _prepare_dataset
-from ocr import preprocess, preprocess_info_screen, ocr
+from sklearn.ensemble import *
+from sklearn.linear_model import *
+from sklearn.preprocessing import *
+from sklearn.neural_network import *
+from datetime import datetime, timedelta
+from pynput.keyboard import Key, Controller
+from train_sklearn import _prepare_dataset, predict_second, use_months, use_years, skip_years
+from ocr import capture_screenshot, preprocess, preprocess_info_screen, ocr, settings
 
 ##### SETTINGS #####
 
-predict_second = 47     # What second (11:29:XX) to make the prediction in validation testing
-
-# Years to skip when importing data (to filter out data from different statistical distribution)
-skip_years = []
-# skip_years = [2014, 2015]
-
-method = "flash"
-method = "html"
-
-if method == "flash":
-    standard_height = 18
-    y_adjustment = 4
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
-
-    plates_x = 621 + plates_x_adjustment
-    plates_y = 358 + y_adjustment
-    plates_width = 40
-
-    auctioners_x = 650
-    auctioners_y = 374 + y_adjustment
-    auctioners_width = 50
-
-    info_x = 540
-    info_y = 450
-    info_width = 350
-    info_height = 190
-
-if method == "html":
-    standard_height = 25
-    x_adjustment = -8
-    y_adjustment = -25
-    plates_x_adjustment = 0  # 0 normally, 14 if using simulation
-
-    plates_x = 546 + plates_x_adjustment + x_adjustment
-    plates_y = 508 + y_adjustment
-    plates_width = 70
-
-    auctioners_x = 582 + x_adjustment
-    auctioners_y = 532 + y_adjustment
-    auctioners_width = 70
-
-    info_x = 560 + x_adjustment
-    info_y = 675 + y_adjustment
-    info_width = 275
-    info_height = 100
+# Settings are mostly synced from train_sklearn to make sure the pipeline is in sync
 
 scaler = StandardScaler()
 
@@ -74,6 +33,10 @@ keyboard = Controller()
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract'
 
 if __name__ == "__main__":
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--sim", action="store_true", help="Use simulation mode")
+    # args = parser.parse_args()
+
     if os.path.isfile("model.pklz"):
         print("Loading model ...")
         with gzip.open("model.pklz", "rb") as fp:
@@ -156,45 +119,80 @@ if __name__ == "__main__":
 
     socket_sent = 0
     backup_sent = 0
+    submit_price = 0
 
     while True:
         # Loading image, dynamic
-
         grabtic = t.time()
-        image = ImageGrab.grab()
+        image = capture_screenshot()
         grabtoc = t.time()
         grabtime = grabtoc - grabtic
 
         # Preprocessing image
-
         processtic = t.time()
 
-        plates_screen = np.array(image.crop((plates_x, plates_y, plates_x + plates_width, plates_y + standard_height)))
+        plates_screen = np.array(image.crop((
+            settings['plates_x'],
+            settings['plates_y'],
+            settings['plates_x'] + settings['plates_width'],
+            settings['plates_y'] + settings['standard_height']
+        )))
         plates_screen = preprocess(plates_screen)
 
-        auctioners_screen = np.array(
-            image.crop((auctioners_x, auctioners_y, auctioners_x + auctioners_width, auctioners_y + standard_height)))
+        auctioners_screen = np.array(image.crop((
+            settings['auctioners_x'],
+            settings['auctioners_y'],
+            settings['auctioners_x'] + settings['auctioners_width'],
+            settings['auctioners_y'] + settings['standard_height']
+        )))
         auctioners_screen = preprocess(auctioners_screen)
 
-        info_screen = np.array(image.crop((info_x, info_y, info_x + info_width, info_y + info_height)))
-        info_screen = preprocess_info_screen(info_screen, method)
+        if settings['method'] == "html":
+            time_screen = np.array(image.crop((
+                settings['time_x'],
+                settings['time_y'],
+                settings['time_x'] + settings['time_width'],
+                settings['time_y'] + settings['standard_height']
+            )))
+            time_screen = preprocess(time_screen)
+            price_screen = np.array(image.crop((
+                settings['price_x'],
+                settings['price_y'],
+                settings['price_x'] + settings['price_width'],
+                settings['price_y'] + settings['standard_height']
+            )))
+            price_screen = preprocess(price_screen)
+        else:
+            info_screen = np.array(image.crop((
+                settings['info_x'],
+                settings['info_y'],
+                settings['info_x'] + settings['info_width'],
+                settings['info_y'] + settings['info_height']
+            )))
+            info_screen = preprocess_info_screen(info_screen, settings['method'])
 
         processtoc = t.time()
         processtime = processtoc - processtic
 
-        # Setting up preview for debug purposes
-
+        # # Setting up preview for debug purposes
         # cv2.imshow('Plates processed', plates_screen)
         # cv2.imshow('Auctioners processed', auctioners_screen)
         # cv2.imshow('Preview: Info box processed', info_screen)
 
         # Performing OCR
-
         ocrtic = t.time()
 
-        infoqueue = Queue()
-        infothread = Thread(target=ocr, args=(info_screen, infoqueue))
-        infothread.start()
+        if settings['method'] == "html":
+            timequeue = Queue()
+            timethread = Thread(target=ocr, args=(time_screen, timequeue))
+            timethread.start()
+            pricequeue = Queue()
+            pricethread = Thread(target=ocr, args=(price_screen, pricequeue))
+            pricethread.start()
+        else:
+            infoqueue = Queue()
+            infothread = Thread(target=ocr, args=(info_screen, infoqueue))
+            infothread.start()
 
         if plates == 0:
             platesqueue = Queue()
@@ -214,43 +212,55 @@ if __name__ == "__main__":
             auctionersocr = auctionersthread.join()
             auctionersocr = auctionersqueue.get()
 
-        info = infothread.join()
-        info = infoqueue.get()
+        if settings['method'] == "html":
+            time = timethread.join()
+            time = timequeue.get()
+            price = pricethread.join()
+            price = pricequeue.get()
+        else:
+            info = infothread.join()
+            info = infoqueue.get()
+
+            time, price, indirect_price = 0, None, 0
+
+            if info != 0:
+                for line in info:
+                    # print(line)
+                    line = line.replace("l", "1").replace("I", "1")
+                    line = re.sub("\D", "", line)
+                    # print(line)
+                    # print("")
+                    if len(line) == 6:
+                        time = line[:2] + ":" + line[2:4] + ":" + line[4:]
+                    elif len(line) == 5:
+                        price = line
+                    else:
+                        if line[:5].isnumeric() == True and line[-5:].isnumeric() == True:
+                            low = int(line[:5])
+                            high = int(line[-5:])
+                            if high - low == 600:
+                                price = (high + low) / 2
+                            else:
+                                continue
 
         # print(info)
 
         ocrtoc = t.time()
         ocrtime = ocrtoc - ocrtic
 
-        # Postprocessing info screen output
+        # Postprocessing output
+        posttic = t.time()
 
-        time, price, indirect_price = 0, None, 0
+        try:
+            time = time[0]
+        except:
+            continue
 
-        if info != 0:
-            for line in info:
-                # print(line)
-                line = line.replace("l", "1")
-                line = re.sub("\D", "", line)
-                # print(line)
-                # print("")
-                if len(line) == 6:
-                    time = line[:2] + ":" + line[2:4] + ":" + line[4:]
-                elif len(line) == 5:
-                    price = line
-                else:
-                    if line[:5].isnumeric() == True and line[-5:].isnumeric() == True:
-                        low = int(line[:5])
-                        high = int(line[-5:])
-                        if high - low == 600:
-                            price = (high + low) / 2
-                        else:
-                            continue
-
-            try:
-                price = int(price)
-            except:
-                # print("Error setting price!")
-                price = 0
+        try:
+            price = int(price[0])
+        except:
+            # print("Error setting price!")
+            price = 0
 
         if plates == 0:
             try:
@@ -267,27 +277,23 @@ if __name__ == "__main__":
         try:
             datetime_object = datetime.strptime(time, "%H:%M:%S")
         except:
+            print("Error parsing time string: {}".format(time))
             continue
 
-        """
-        # This is to prevent more than one line being output per second
-        if datetime_object >= datetime.strptime("11:29:00", "%H:%M:%S"):
-            if pred_df.at[0, time] != 0:
-                continue
-        """
+        # # This is to prevent more than one line being output per second
+        # if datetime_object >= datetime.strptime("11:29:00", "%H:%M:%S"):
+        #     if pred_df.at[0, time] != 0:
+        #         continue
 
-        # If simulation mode is off, replace OCR'd time with system time because OCR might skip seconds
-        system_time = datetime.now()
-        system_time = system_time.strftime("%H:%M:%S")
-        if plates_x_adjustment == 0:
-            # time = system_time
-            pass
+        # # If simulation mode is off, replace OCR'd time with system time because OCR might skip seconds
+        # system_time = datetime.now()
+        # system_time = system_time.strftime("%H:%M:%S")
+        # if settings['plates_x_adjustment'] == 0:
+        #     # time = system_time
+        #     pass
 
+        # For debugging purposes
         # print("Time: {}, price: {}, plates: {}, auctioners: {}".format(time, price, plates, auctioners))
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            break
 
         # Updating prediction info
 
@@ -296,8 +302,10 @@ if __name__ == "__main__":
 
         # """
         # Comment if only time series without additional data
-        # pred_df.at[0, "month_ {}".format(month)] = 1
-        # pred_df.at[0, "Year"] = year
+        if use_months:
+            pred_df.at[0, "month_ {}".format(month)] = 1
+        if use_years:
+            pred_df.at[0, "Year"] = year
         pred_df.at[0, "Plates"] = plates
         pred_df.at[0, "Auctioners"] = auctioners
         pred_df.at[0, "Success rate"] = np.round(plates / auctioners, 4)
@@ -307,7 +315,8 @@ if __name__ == "__main__":
         time_next = (datetime_object + timedelta(seconds=1)).strftime("%H:%M:%S")
         if datetime_object >= datetime.strptime("11:29:00", "%H:%M:%S") and datetime_object <= datetime.strptime("11:29:59", "%H:%M:%S"):
             pred_df.at[0, time] = price - startprice
-            # pred_df.at[0, time_next] = price - startprice       # Autofill the next second just in case we jump a second
+            if datetime_object + timedelta(seconds=1) <= datetime.strptime("11:29:59", "%H:%M:%S"):
+                pred_df.at[0, time_next] = price - startprice       # Autofill the next second just in case we jump a second
 
         """
         # Autofill previous second with current price in case there is a jump in seconds
@@ -317,14 +326,16 @@ if __name__ == "__main__":
                 pred_df.at[0, time_prev] = price-startprice
         """
 
+        posttoc = t.time()
+        posttime = posttoc - posttic
+
         # Predicting!
+        predtic = t.time()
 
         pred = model.predict(scaler.transform(pred_df))
         pred = int(np.round((pred[0] + 150 + startprice) / 100, 0) * 100)  # Aim for the middle of the 300 RMB range and round to closest 100
         # pred = max(pred, pred_df["11:29:{}".format(predict_second)].to_numpy() + startprice + 300)
         pred = max(pred, price + 300)
-
-        # print("Plates: {}, Auctioners: {}".format(plates, auctioners))      # Debug purposes, comment during actual use
 
         """
         if time == "11:29:37" or time == "11:29:38":
@@ -336,11 +347,14 @@ if __name__ == "__main__":
 
         """
 
+        predtoc = t.time()
+        predtime = predtoc - predtic
+
         ##### CHANGE HERE IF PREDICTION TIME CHANGES #####
 
-        if time == "11:29:45":
+        if time == "11:29:45":  # Display backup strategy if actual prediction fails (45s + 1000)
             if backup_sent == 0:
-                print("Time: {}, current price: {}, BACKUP pred: {}".format(time, price, price + 1000))  # Backup strategy if actual prediction fail
+                print("Time: {}, current price: {}, BACKUP pred: {}".format(time, price, price + 1000))
                 backup_sent = 1
         if time == "11:29:{}".format(predict_second):
             bid = pred
@@ -364,14 +378,31 @@ if __name__ == "__main__":
         if time == "11:29:59":
             # """
             # Pretty print final prediction dataframe for debugging and statistical purposes
+            print("Actual monthly data:")
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 print(pred_df.T)
             # """
 
             # """
             # Pretty print entire pandas prediction series for debugging purposes
+            print("Prediction input for debug purposes:")
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 print(pred_df_debug.T)
             # """
 
             break  # Stops the script loop when auction ends
+
+        # # Tally of different processing times
+        # print('Grab: {}s, Preprocess: {}s, OCR: {}s, Postprocess: {}, Predict: {}, Total: {}s ({}fps)'.format(
+        #     np.round(grabtime,2),
+        #     np.round(processtime,2),
+        #     np.round(ocrtime,2),
+        #     np.round(posttime,2),
+        #     np.round(predtime,2),
+        #     np.round(np.sum([grabtime, processtime, ocrtime, posttime, predtime]),2),
+        #     np.round(1/np.sum([grabtime, processtime, ocrtime, posttime, predtime]),1)
+        # ))
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break

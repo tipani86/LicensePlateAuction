@@ -2,6 +2,7 @@ import os
 import gzip
 import time
 import pickle
+import warnings
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
@@ -9,8 +10,13 @@ from sklearn.ensemble import *
 from sklearn.linear_model import *
 from sklearn.preprocessing import *
 from sklearn.neural_network import *
+from sklearn.exceptions import DataConversionWarning
+warnings.filterwarnings(action='ignore', category=DataConversionWarning)
 
 ##### Dataset settings #####
+
+use_years = True
+use_months = True
 
 predict_second = 47     # What second (11:29:XX) to make the prediction in validation testing
 
@@ -29,7 +35,7 @@ ignore_months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 # ignore_months = [11]       # Comment to disable
 
 latest_year = 2021
-latest_month = 3
+latest_month = 7
 
 ############
 
@@ -70,11 +76,15 @@ def _prepare_dataset(df, ignore_month=None, val=False):
 
     # X = new_month.join(other_features).values  # Data seems to be good even without year and month info
 
-    # other_features = df[["Year", "Plates", "Auctioners", "Success rate", "Startprice"]]
-    other_features = df[["Plates", "Auctioners", "Success rate", "Startprice"]]             # No year option
+    if use_years:
+        other_features = df[["Year", "Plates", "Auctioners", "Success rate", "Startprice"]]
+    else:
+        other_features = df[["Plates", "Auctioners", "Success rate", "Startprice"]]             # No year option
 
-    # features = new_month.join(other_features)
-    features = other_features                   # No month option
+    if use_months:
+        features = new_month.join(other_features)
+    else:
+        features = other_features                   # No month option
 
     all_features = features.join(timesteps)
 
@@ -153,6 +163,9 @@ if __name__ == "__main__":
 
                 model, predicted, monthly_actual, winning_bid = train(data_train, data_val, ignore_month)
 
+                if not isinstance(predicted, int):
+                    predicted = predicted[0]
+
                 simulation_results.append({
                     "year": ignore_year,
                     "month": ignore_month,
@@ -162,9 +175,9 @@ if __name__ == "__main__":
                 })
 
                 toc = time.time()
-                elapsed = round((toc - tic) / 60, 1)
-                progress = round(iter / total * 100, 1)
-                remaining = abs(round(((toc - tic) / 60) / (progress / 100) - elapsed, 1))
+                elapsed = 1.0 * (toc - tic) / 60
+                progress = 1.0 * iter / total * 100
+                remaining = abs(((toc - tic) / 60) / (progress / 100) - elapsed)
                 # print("{}% done. Elapsed: {} min(s). Remaining: {} min(s)".format(progress, elapsed, remaining))
                 simulation_df = pd.DataFrame(simulation_results)
                 successes = simulation_df.win_bid.sum()
