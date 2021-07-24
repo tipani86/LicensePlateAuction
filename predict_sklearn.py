@@ -1,28 +1,28 @@
 import os
-import numpy as np
-import pandas as pd
-import time as t
 import re
 import cv2
 import gzip
 import pickle
+import argparse
+import time as t
+import numpy as np
 import pytesseract
-from pynput.keyboard import Key, Controller
-from datetime import datetime, timedelta
+import pandas as pd
 from queue import Queue
 from threading import Thread
-from sklearn.preprocessing import *
 from sklearn.utils import shuffle
-from train_sklearn import _prepare_dataset
+from sklearn.ensemble import *
+from sklearn.linear_model import *
+from sklearn.preprocessing import *
+from sklearn.neural_network import *
+from datetime import datetime, timedelta
+from pynput.keyboard import Key, Controller
+from train_sklearn import _prepare_dataset, predict_second, use_months, use_years, skip_years
 from ocr import capture_screenshot, preprocess, preprocess_info_screen, ocr, settings
 
 ##### SETTINGS #####
 
-predict_second = 45     # What second (11:29:XX) to make the prediction in validation testing
-
-# Years to skip when importing data (to filter out data from different statistical distribution)
-skip_years = []
-# skip_years = [2014, 2015]
+# Settings are mostly synced from train_sklearn to make sure the pipeline is in sync
 
 scaler = StandardScaler()
 
@@ -33,6 +33,10 @@ keyboard = Controller()
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract'
 
 if __name__ == "__main__":
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--sim", action="store_true", help="Use simulation mode")
+    # args = parser.parse_args()
+
     if os.path.isfile("model.pklz"):
         print("Loading model ...")
         with gzip.open("model.pklz", "rb") as fp:
@@ -298,8 +302,10 @@ if __name__ == "__main__":
 
         # """
         # Comment if only time series without additional data
-        # pred_df.at[0, "month_ {}".format(month)] = 1
-        # pred_df.at[0, "Year"] = year
+        if use_months:
+            pred_df.at[0, "month_ {}".format(month)] = 1
+        if use_years:
+            pred_df.at[0, "Year"] = year
         pred_df.at[0, "Plates"] = plates
         pred_df.at[0, "Auctioners"] = auctioners
         pred_df.at[0, "Success rate"] = np.round(plates / auctioners, 4)
@@ -372,12 +378,14 @@ if __name__ == "__main__":
         if time == "11:29:59":
             # """
             # Pretty print final prediction dataframe for debugging and statistical purposes
+            print("Actual monthly data:")
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 print(pred_df.T)
             # """
 
             # """
             # Pretty print entire pandas prediction series for debugging purposes
+            print("Prediction input for debug purposes:")
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 print(pred_df_debug.T)
             # """

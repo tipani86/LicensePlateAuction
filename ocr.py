@@ -17,7 +17,8 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/te
 plates, auctioners = 0, 0
 method = "flash"
 method = "html"
-browser = "firefox-half"
+browser = "firefox"
+mode = "real"   # "real" or "sim" to accommodate some UI changes
 socket_sent = 0
 
 settings = {
@@ -31,12 +32,17 @@ print("Method: {}".format(method))
 print("")
 
 if browser == "firefox":
-    settings['x_adjustment'] = 0
-    settings['y_adjustment'] = 0
+    settings['x_adjustment'] = -8
+    settings['y_adjustment'] = 10
 
 if browser == "firefox-half":
     settings['x_adjustment'] = -360
-    settings['y_adjustment'] = 0
+    settings['y_adjustment'] = 10
+
+if mode == "real":
+    settings['y_adjustment'] += 35
+
+print("Mode: {}".format(mode))
 
 if method == "flash":
     settings['method'] = method
