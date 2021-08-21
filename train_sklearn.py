@@ -35,7 +35,7 @@ ignore_months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 # ignore_months = [11]       # Comment to disable
 
 latest_year = 2021
-latest_month = 7
+latest_month = 8
 
 ############
 
@@ -49,7 +49,9 @@ if validate:
 
 scaler = StandardScaler()
 # model = GradientBoostingRegressor(learning_rate=lr, verbose=verbose, n_estimators=epochs)
-model = ARDRegression(n_iter=epochs)
+# model = ARDRegression(n_iter=epochs)
+model = BaggingRegressor(n_estimators=100)
+# model = RandomForestRegressor()
 # model = MLPRegressor(learning_rate_init=lr, hidden_layer_sizes=(16,), verbose=verbose, max_iter=epochs)
 
 ############

@@ -333,7 +333,7 @@ if __name__ == "__main__":
         predtic = t.time()
 
         pred = model.predict(scaler.transform(pred_df))
-        pred = int(np.round((pred[0] + 150 + startprice) / 100, 0) * 100)  # Aim for the middle of the 300 RMB range and round to closest 100
+        pred = int(np.round((pred[0] + 100 + startprice) / 100, 0) * 100)  # Aim for the middle of the 300 RMB range and round to closest 100
         # pred = max(pred, pred_df["11:29:{}".format(predict_second)].to_numpy() + startprice + 300)
         pred = max(pred, price + 300)
 
