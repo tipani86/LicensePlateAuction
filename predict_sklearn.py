@@ -33,9 +33,12 @@ keyboard = Controller()
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract'
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--sim", action="store_true", help="Use simulation mode")
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sim", action="store_true", help="Use simulation mode")
+    args = parser.parse_args()
+
+    if args.sim:
+        settings['y_adjustment'] -= 35
 
     if os.path.isfile("model.pklz"):
         print("Loading model ...")

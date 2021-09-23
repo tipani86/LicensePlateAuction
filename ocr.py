@@ -15,7 +15,6 @@ keyboard = Controller()
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract'
 
 plates, auctioners = 0, 0
-method = "flash"
 method = "html"
 browser = "firefox"
 mode = "real"   # "real" or "sim" to accommodate some UI changes
@@ -33,36 +32,36 @@ print("")
 
 if browser == "firefox":
     settings['x_adjustment'] = -8
-    settings['y_adjustment'] = 10
+    settings['y_adjustment'] = 45
 
 if browser == "firefox-half":
     settings['x_adjustment'] = -360
-    settings['y_adjustment'] = 10
+    settings['y_adjustment'] = 45
 
-if mode == "real":
-    settings['y_adjustment'] += 35
+if mode == "sim":
+    settings['y_adjustment'] -= 35
 
 print("Mode: {}".format(mode))
 
-if method == "flash":
-    settings['method'] = method
-    settings['standard_height'] = 18
-
-    settings['y_adjustment'] = 4
-    settings['plates_x_adjustment'] = 0  # 0 normally, 14 if using simulation
-
-    settings['plates_x'] = 621 + settings['plates_x_adjustment']
-    settings['plates_y'] = 358 + settings['y_adjustment']
-    settings['plates_width'] = 40
-
-    settings['auctioners_x'] = 650
-    settings['auctioners_y'] = 374 + settings['y_adjustment']
-    settings['auctioners_width'] = 50
-
-    settings['info_x'] = 540
-    settings['info_y'] = 450
-    settings['info_width'] = 350
-    settings['info_height'] = 190
+# if method == "flash":
+#     settings['method'] = method
+#     settings['standard_height'] = 18
+#
+#     settings['y_adjustment'] = 4
+#     settings['plates_x_adjustment'] = 0  # 0 normally, 14 if using simulation
+#
+#     settings['plates_x'] = 621 + settings['plates_x_adjustment']
+#     settings['plates_y'] = 358 + settings['y_adjustment']
+#     settings['plates_width'] = 40
+#
+#     settings['auctioners_x'] = 650
+#     settings['auctioners_y'] = 374 + settings['y_adjustment']
+#     settings['auctioners_width'] = 50
+#
+#     settings['info_x'] = 540
+#     settings['info_y'] = 450
+#     settings['info_width'] = 350
+#     settings['info_height'] = 190
 
 if method == "html":
     settings['method'] = method
