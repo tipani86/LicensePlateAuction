@@ -35,7 +35,7 @@ ignore_months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 # ignore_months = [11]       # Comment to disable
 
 latest_year = 2021
-latest_month = 8
+latest_month = 9
 
 ############
 
